@@ -1,0 +1,524 @@
+"""Analyse research-results/raw/*.csv exactly as pre-declared in PROTOCOL.md.
+
+    backend\\.venv\\Scripts\\python.exe research-results\\analyze.py
+
+Writes: tables.md, verdicts.json, charts/*.svg. Everything is computed from the CSV files only.
+Decision rule (PROTOCOL.md): a difference is CLEAR only if the 95 % Student-t CIs of the two
+configuration means do not overlap. A paired-difference CI is reported as a supplement.
+"""
+from __future__ import annotations
+
+import csv
+import json
+import math
+import sys
+from collections import defaultdict
+from html import escape
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "backend"))
+from app.experiments.analysis import mean_ci  # noqa: E402  (same CI routine the platform uses)
+
+RAW, CHARTS = HERE / "raw", HERE / "charts"
+CLASSES = ["cpu_bound", "io_heavy", "interactive", "mixed", "high_load"]
+CLASS_NAME = {"cpu_bound": "CPU-bound", "io_heavy": "I/O-heavy", "interactive": "Interactive", "mixed": "Mixed", "high_load": "High load"}
+FOCUS = ["interactive", "mixed", "high_load"]
+DIR = {"response_mean": "lower", "response_median": "lower", "response_p95": "lower", "response_max": "lower",
+       "ready_wait_mean": "lower", "turnaround_mean": "lower", "turnaround_p95": "lower", "throughput": "higher",
+       "cpu_utilization": "higher", "context_switches": "lower", "switch_overhead": "lower",
+       "max_ready_stint": "lower", "starved_count": "lower", "jain_fairness": "higher", "preemptions": "lower", "makespan": "lower"}
+LABEL = {"response_mean": "Resp. mean", "response_median": "Resp. median", "response_p95": "Resp. p95", "response_max": "Resp. max",
+         "ready_wait_mean": "Ready wait", "turnaround_mean": "Turnaround", "turnaround_p95": "Turn. p95",
+         "throughput": "Throughput", "cpu_utilization": "CPU util.", "context_switches": "Switches",
+         "switch_overhead": "Overhead", "max_ready_stint": "Max stint", "starved_count": "Starved #",
+         "jain_fairness": "Jain", "preemptions": "Preempt.", "makespan": "Makespan"}
+CONFIG_ORDER = ["FCFS", "SJF", "SRTF", "RR q=2", "RR q=4", "RR q=8", "MLFQ", "AQS", "PRIO-P"]
+PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6", "#e34948"]  # validated light palette
+COLOR = {c: PALETTE[i] for i, c in enumerate(CONFIG_ORDER[:8])}
+RR_SWEPT, AQS_SWEPT = "RR (quantum = x)", "AQS (base quantum = x)"
+COLOR[RR_SWEPT], COLOR[AQS_SWEPT] = COLOR["RR q=4"], COLOR["AQS"]
+NUMERIC = list(DIR)
+
+
+def load(name):
+    rows = []
+    for r in csv.DictReader(open(RAW / name, encoding="utf-8")):
+        for k in NUMERIC:
+            r[k] = float(r[k])
+        r["trial"] = int(r["trial"])
+        r["process_count"] = int(r["process_count"])
+        r["context_switch_cost"] = int(r["context_switch_cost"])
+        rows.append(r)
+    return rows
+
+
+S1, S2, S3, S4 = (load(f) for f in ("step1_comparison.csv", "step2_cost_sweep.csv", "step3_quantum_sweep.csv", "step4_scale.csv"))
+
+
+def vals(rows, metric, **flt):
+    sel = [r for r in rows if all(str(r[k]) == str(v) for k, v in flt.items())]
+    sel.sort(key=lambda r: r["trial"])
+    return [r[metric] for r in sel]
+
+
+def interval(v):
+    c = mean_ci(v)
+    return c["mean"], c["mean"] - c["ci95"], c["mean"] + c["ci95"], c["ci95"]
+
+
+def verdict(a, b, metric):
+    """Primary rule: CIs of the means must not overlap. Returns better|worse|unclear (for a relative to b)."""
+    ma, la, ha, _ = interval(a)
+    mb, lb, hb, _ = interval(b)
+    if ha < lb or hb < la:
+        better = ma < mb if DIR[metric] == "lower" else ma > mb
+        return "better" if better else "worse"
+    return "unclear"
+
+
+def paired_verdict(a, b, metric):
+    c = mean_ci([x - y for x, y in zip(a, b)])
+    lo, hi = c["mean"] - c["ci95"], c["mean"] + c["ci95"]
+    if lo > 0:
+        return "worse" if DIR[metric] == "lower" else "better"
+    if hi < 0:
+        return "better" if DIR[metric] == "lower" else "worse"
+    return "unclear"
+
+
+def pct(a, b):
+    ma, mb = sum(a) / len(a), sum(b) / len(b)
+    return None if mb == 0 else (ma - mb) / mb * 100
+
+
+def fmt(metric, v, digits=2):
+    if metric == "cpu_utilization":
+        return f"{v * 100:.1f}%"
+    if metric == "throughput" or metric == "jain_fairness":
+        return f"{v:.3f}"
+    return f"{v:.{digits}f}"
+
+
+def cell(metric, v):
+    m, _, _, ci = interval(v)
+    return f"{fmt(metric, m)} ± {fmt(metric, ci) if metric not in ('cpu_utilization',) else f'{ci * 100:.1f}'}"
+
+
+def md_table(headers, rows):
+    out = ["| " + " | ".join(headers) + " |", "|" + "|".join("---" for _ in headers) + "|"]
+    out += ["| " + " | ".join(str(c) for c in r) + " |" for r in rows]
+    return "\n".join(out)
+
+
+md = []
+verdicts: dict = {"decision_rule": "clear iff 95% t-CIs of the means do not overlap (PROTOCOL.md)"}
+manifest = json.loads((RAW / "manifest.json").read_text(encoding="utf-8"))
+md += ["# Result tables (generated by analyze.py; do not edit)", "",
+       f"Source: `raw/*.csv`, protocol SHA-256 `{manifest['protocol_sha256'][:16]}…`, {manifest['simulations_total']} simulations, "
+       f"{manifest['trials_per_class']} trials per class, context-switch cost {manifest['context_switch_cost_main']} tu in Step 1.",
+       "Cells are mean ± 95 % Student-t CI half-width over the trials (df = 9). Time unit: tu.", ""]
+
+# ------------------------------------------------------------------ Step 1 tables
+md += ["## Step 1: controlled comparison", ""]
+LAT = ["response_mean", "response_median", "response_p95", "ready_wait_mean", "turnaround_mean"]
+SYS = ["throughput", "cpu_utilization", "context_switches", "switch_overhead", "max_ready_stint", "starved_count", "jain_fairness"]
+for cls in CLASSES:
+    md += [f"### {CLASS_NAME[cls]}", ""]
+    for group, title in ((LAT, "Latency metrics"), (SYS, "System, overhead and fairness metrics")):
+        rows = [[c] + [cell(m, vals(S1, m, workload_class=cls, config=c)) for m in group] for c in CONFIG_ORDER]
+        md += [f"**{title}**", "", md_table(["Configuration"] + [LABEL[m] for m in group], rows), ""]
+
+# ------------------------------------------------------------------ AQS vs baselines (H2, H2-cost)
+BASE = ["RR q=4", "MLFQ", "RR q=2", "RR q=8", "SRTF", "SJF", "FCFS"]
+CMP = ["response_mean", "response_p95", "ready_wait_mean", "turnaround_mean", "throughput", "context_switches", "max_ready_stint", "starved_count", "jain_fairness"]
+md += ["## AQS compared with each baseline (Step 1)", "",
+       "Each cell: relative change of the AQS mean versus the baseline mean, then the **primary-rule verdict** (CIs of means must not overlap) "
+       "and, in brackets, the supplementary paired-difference verdict. *better/worse* refer to AQS.", ""]
+verdicts["aqs_vs"] = {}
+for b in BASE:
+    md += [f"### AQS vs {b}", ""]
+    rows = []
+    for cls in CLASSES:
+        row = [CLASS_NAME[cls]]
+        for m in CMP:
+            a, bb = vals(S1, m, workload_class=cls, config="AQS"), vals(S1, m, workload_class=cls, config=b)
+            v, pv, d = verdict(a, bb, m), paired_verdict(a, bb, m), pct(a, bb)
+            verdicts["aqs_vs"].setdefault(b, {}).setdefault(cls, {})[m] = {"verdict": v, "paired": pv, "delta_pct": None if d is None else round(d, 2)}
+            row.append(f"{'n/a' if d is None else f'{d:+.1f}%'} **{v}** ({pv})")
+        rows.append(row)
+    md += [md_table(["Class"] + [LABEL[m] for m in CMP], rows), ""]
+
+# H2 matrix summary
+md += ["## H2: does AQS lower response time? (primary rule)", ""]
+rows = []
+for b in ("RR q=4", "MLFQ"):
+    for cls in CLASSES:
+        rows.append([b, CLASS_NAME[cls]] + [
+            f"{verdicts['aqs_vs'][b][cls][m]['delta_pct']:+.1f}% **{verdicts['aqs_vs'][b][cls][m]['verdict']}** ({verdicts['aqs_vs'][b][cls][m]['paired']})"
+            for m in ("response_mean", "response_p95")])
+md += [md_table(["Baseline", "Class", "Mean response", "p95 response"], rows), ""]
+
+# H2-cost
+DIMS = ["turnaround_mean", "context_switches", "jain_fairness", "starved_count", "max_ready_stint", "throughput"]
+verdicts["h2_cost_clearly_worse_than_RRq4"] = {}
+md += ["## H2-cost: where is AQS clearly worse than RR q=4? (primary rule)", ""]
+rows = []
+for cls in CLASSES:
+    worse = [LABEL[m] for m in DIMS if verdicts["aqs_vs"]["RR q=4"][cls][m]["verdict"] == "worse"]
+    better = [LABEL[m] for m in DIMS if verdicts["aqs_vs"]["RR q=4"][cls][m]["verdict"] == "better"]
+    verdicts["h2_cost_clearly_worse_than_RRq4"][cls] = worse
+    rows.append([CLASS_NAME[cls], ", ".join(worse) or "none", ", ".join(better) or "none"])
+md += [md_table(["Class", "Dimensions where AQS is clearly worse", "Dimensions where AQS is clearly better"], rows), ""]
+
+# ------------------------------------------------------------------ H1 rankings
+md += ["## H1: rankings by class (point estimates of the mean; ties between neighbours may be unclear)", ""]
+verdicts["h1_top"] = {}
+for m in ("response_mean", "turnaround_mean"):
+    rows, tops = [], {}
+    for cls in CLASSES:
+        ranked = sorted(CONFIG_ORDER, key=lambda c: (sum(vals(S1, m, workload_class=cls, config=c)) / TRIALS if (TRIALS := len(vals(S1, m, workload_class=cls, config=c))) else 0))
+        tops[cls] = ranked[0]
+        rows.append([CLASS_NAME[cls], " < ".join(ranked)])
+    verdicts["h1_top"][m] = tops
+    md += [f"**{LABEL[m]}** (best first)", "", md_table(["Class", "Ranking"], rows), ""]
+verdicts["h1_supported"] = any(len(set(t.values())) > 1 for t in verdicts["h1_top"].values())
+md += [f"First-ranked configuration per class: response {verdicts['h1_top']['response_mean']}, turnaround {verdicts['h1_top']['turnaround_mean']}. "
+       f"H1 criterion (first-ranked differs across classes for at least one metric): **{'met' if verdicts['h1_supported'] else 'not met'}**.", ""]
+
+# ------------------------------------------------------------------ H3 cost sweep
+md += ["## Step 2 / H3: switch-cost sensitivity", ""]
+verdicts["h3_cost5_AQS_vs_RRq2_switches"] = {}
+for m, title in (("context_switches", "Context switches"), ("response_mean", "Mean response"), ("turnaround_mean", "Mean turnaround")):
+    md += [f"**{title}** (rows: class and configuration; columns: switch cost)", ""]
+    rows = []
+    for cls in CLASSES:
+        for c in ("RR q=2", "RR q=4", "AQS"):
+            rows.append([CLASS_NAME[cls], c] + [cell(m, vals(S2, m, workload_class=cls, config=c, context_switch_cost=k)) for k in range(6)])
+    md += [md_table(["Class", "Configuration"] + [f"cost {k}" for k in range(6)], rows), ""]
+rows = []
+for cls in CLASSES:
+    a, b = vals(S2, "context_switches", workload_class=cls, config="AQS", context_switch_cost=5), vals(S2, "context_switches", workload_class=cls, config="RR q=2", context_switch_cost=5)
+    v, pv, d = verdict(a, b, "context_switches"), paired_verdict(a, b, "context_switches"), pct(a, b)
+    verdicts["h3_cost5_AQS_vs_RRq2_switches"][cls] = {"verdict": v, "paired": pv, "delta_pct": None if d is None else round(d, 2)}
+    rows.append([CLASS_NAME[cls], f"{d:+.1f}%", f"**{v}**", pv])
+md += ["**H3 check: switches at cost 5, AQS vs RR q=2**", "", md_table(["Class", "Δ switches", "Primary rule", "Paired"], rows), ""]
+
+# ------------------------------------------------------------------ H4
+md += ["## H4: starvation indicators, AQS vs preemptive Priority without ageing (Step 1)", ""]
+verdicts["h4"] = {}
+rows = []
+for cls in CLASSES:
+    row = [CLASS_NAME[cls]]
+    for m in ("starved_count", "max_ready_stint"):
+        a, b = vals(S1, m, workload_class=cls, config="AQS"), vals(S1, m, workload_class=cls, config="PRIO-P")
+        verdicts["h4"].setdefault(cls, {})[m] = {"AQS": interval(a)[0], "PRIO-P": interval(b)[0], "verdict": verdict(a, b, m), "paired": paired_verdict(a, b, m)}
+        row += [cell(m, a), cell(m, b), f"**{verdict(a, b, m)}** ({paired_verdict(a, b, m)})"]
+    rows.append(row)
+md += [md_table(["Class", "AQS starved #", "PRIO-P starved #", "AQS vs PRIO-P", "AQS max stint", "PRIO-P max stint", "AQS vs PRIO-P"], rows), ""]
+
+# ------------------------------------------------------------------ Step 3
+md += ["## Step 3: quantum sensitivity (cost 1)", ""]
+Q = [1, 2, 3, 4, 6, 8, 12, 16]
+for cls in CLASSES:
+    rows = []
+    for q in Q:
+        row = [q]
+        for m in ("response_mean", "turnaround_mean", "context_switches"):
+            for c in ("RR", "AQS"):
+                row.append(cell(m, vals(S3, m, workload_class=cls, config=c, sweep_value=q)))
+        rows.append(row)
+    md += [f"### {CLASS_NAME[cls]}", "", md_table(["Quantum (RR) / base quantum (AQS)", "Resp RR", "Resp AQS", "Turn RR", "Turn AQS", "Switches RR", "Switches AQS"], rows), ""]
+
+# ------------------------------------------------------------------ Step 4
+md += ["## Step 4: scale (cost 1)", ""]
+N = [4, 8, 12, 16, 24, 32]
+for cls in ("interactive", "mixed"):
+    for m in ("response_mean", "turnaround_mean", "context_switches"):
+        rows = [[n] + [cell(m, vals(S4, m, workload_class=cls, config=c, sweep_value=n)) for c in CONFIG_ORDER[:8]] for n in N]
+        md += [f"### {CLASS_NAME[cls]}: {LABEL[m]}", "", md_table(["Processes"] + CONFIG_ORDER[:8], rows), ""]
+verdicts["scale_aqs_vs_rr4"] = {}
+for cls in ("interactive", "mixed"):
+    for n in N:
+        a, b = vals(S4, "response_mean", workload_class=cls, config="AQS", sweep_value=n), vals(S4, "response_mean", workload_class=cls, config="RR q=4", sweep_value=n)
+        verdicts["scale_aqs_vs_rr4"][f"{cls}|{n}"] = {"verdict": verdict(a, b, "response_mean"), "paired": paired_verdict(a, b, "response_mean"), "delta_pct": round(pct(a, b), 2) if pct(a, b) is not None else None}
+
+# ------------------------------------------------------------------ Exploratory extensions
+# Added AFTER the Step 1/2 tables had been viewed, to avoid hand-comparing CIs. The decision rule is unchanged;
+# these sections are descriptive and are labelled exploratory in summary.md. They do not alter any pre-declared verdict.
+md += ["## Exploratory extension A: AQS vs fixed RR at every switch cost (Step 2 data)", "",
+       "Cell: relative change of the AQS mean, then primary-rule verdict (paired verdict in brackets). Added after viewing the data; rule unchanged.", ""]
+verdicts["cost_sweep_aqs_vs"] = {}
+for base in ("RR q=4", "RR q=2"):
+    for m in ("response_mean", "turnaround_mean", "context_switches"):
+        rows = []
+        for cls in CLASSES:
+            row = [CLASS_NAME[cls]]
+            for k in range(6):
+                a = vals(S2, m, workload_class=cls, config="AQS", context_switch_cost=k)
+                b = vals(S2, m, workload_class=cls, config=base, context_switch_cost=k)
+                v, pv, d = verdict(a, b, m), paired_verdict(a, b, m), pct(a, b)
+                verdicts["cost_sweep_aqs_vs"].setdefault(base, {}).setdefault(m, {}).setdefault(cls, {})[k] = {"verdict": v, "paired": pv, "delta_pct": None if d is None else round(d, 2)}
+                row.append(f"{'n/a' if d is None else f'{d:+.1f}%'} **{v}** ({pv})")
+            rows.append(row)
+        md += [f"**{LABEL[m]}: AQS vs {base}**", "", md_table(["Class"] + [f"cost {k}" for k in range(6)], rows), ""]
+
+md += ["## Exploratory extension B: AQS vs RR q=4 and vs MLFQ by process count (Step 4 data)", "",
+       "Mean response. Same cell format. Added after viewing the data; rule unchanged.", ""]
+verdicts["scale_aqs_vs_mlfq"] = {}
+for base in ("RR q=4", "MLFQ"):
+    rows = []
+    for cls in ("interactive", "mixed"):
+        row = [CLASS_NAME[cls]]
+        for n in N:
+            a = vals(S4, "response_mean", workload_class=cls, config="AQS", sweep_value=n)
+            b = vals(S4, "response_mean", workload_class=cls, config=base, sweep_value=n)
+            v, pv, d = verdict(a, b, "response_mean"), paired_verdict(a, b, "response_mean"), pct(a, b)
+            if base == "MLFQ":
+                verdicts["scale_aqs_vs_mlfq"][f"{cls}|{n}"] = {"verdict": v, "paired": pv, "delta_pct": round(d, 2)}
+            row.append(f"{d:+.1f}% **{v}** ({pv})")
+        rows.append(row)
+    md += [f"**AQS vs {base}**", "", md_table(["Class"] + [f"{n} procs" for n in N], rows), ""]
+
+(HERE / "tables.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+(HERE / "verdicts.json").write_text(json.dumps(verdicts, indent=1) + "\n", encoding="utf-8")
+
+# ------------------------------------------------------------------ data for the website's Research page
+# The page fetches this file, so its numbers always come from the recorded CSVs (never typed by hand).
+import shutil
+
+SITE = HERE.parent / "frontend" / "public" / "research"
+SITE.mkdir(parents=True, exist_ok=True)
+site_rows = []
+for cls in CLASSES:
+    row = {"class": CLASS_NAME[cls]}
+    for m in ("response_mean", "turnaround_mean", "context_switches", "max_ready_stint"):
+        v = verdicts["aqs_vs"]["RR q=4"][cls][m]
+        a = interval(vals(S1, m, workload_class=cls, config="AQS"))[0]
+        b = interval(vals(S1, m, workload_class=cls, config="RR q=4"))[0]
+        row[m] = {**v, "aqs": round(a, 2), "rr4": round(b, 2)}
+    site_rows.append(row)
+(SITE / "summary-table.json").write_text(json.dumps({
+    "source": "research-results/ (analyze.py)", "simulations": manifest["simulations_total"],
+    "trials_per_class": manifest["trials_per_class"], "context_switch_cost": manifest["context_switch_cost_main"],
+    "protocol_sha256": manifest["protocol_sha256"], "rule": verdicts["decision_rule"],
+    "baseline": "RR q=4", "rows": site_rows}, indent=1) + "\n", encoding="utf-8")
+
+# ====================================================================== SVG charts
+W_BG, INK, MUTED, GRID = "#ffffff", "#1a1a19", "#5f6368", "#e3e5e8"
+
+
+def nice_ticks(lo, hi, n=5):
+    if hi <= lo:
+        hi = lo + 1
+    span = hi - lo
+    step = 10 ** math.floor(math.log10(span / n))
+    for mult in (1, 2, 5, 10):
+        if span / (step * mult) <= n:
+            step *= mult
+            break
+    t, v = [], math.floor(lo / step) * step
+    while True:  # the last tick must reach the data maximum, otherwise tall bars leave the panel
+        t.append(round(v, 10))
+        if v >= hi - step * 1e-6:
+            break
+        v += step
+    return t
+
+
+class Svg:
+    def __init__(self, w, h):
+        self.w, self.h, self.parts = w, h, []
+
+    def add(self, s):
+        self.parts.append(s)
+
+    def text(self, x, y, s, size=11, anchor="start", color=INK, weight=400, rotate=None):
+        tr = f' transform="rotate({rotate} {x} {y})"' if rotate is not None else ""
+        self.add(f'<text x="{x:.1f}" y="{y:.1f}" font-size="{size}" text-anchor="{anchor}" fill="{color}" font-weight="{weight}" font-family="Segoe UI, Arial, sans-serif"{tr}>{escape(str(s))}</text>')
+
+    def line(self, x1, y1, x2, y2, color=GRID, width=1, dash=None):
+        d = f' stroke-dasharray="{dash}"' if dash else ""
+        self.add(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{color}" stroke-width="{width}"{d}/>')
+
+    def rect(self, x, y, w, h, fill, rx=0):
+        self.add(f'<rect x="{x:.1f}" y="{y:.1f}" width="{max(w, 0):.1f}" height="{max(h, 0):.1f}" rx="{rx}" fill="{fill}"/>')
+
+    def circle(self, x, y, r, fill):
+        self.add(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{fill}" stroke="{W_BG}" stroke-width="1.5"/>')
+
+    def save(self, name, title, desc):
+        CHARTS.mkdir(exist_ok=True)
+        body = "\n".join(self.parts)
+        (CHARTS / name).write_text(
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {self.w} {self.h}" width="{self.w}" height="{self.h}" role="img" aria-labelledby="t d">'
+            f'<title id="t">{escape(title)}</title><desc id="d">{escape(desc)}</desc><rect width="100%" height="100%" fill="{W_BG}"/>\n{body}\n</svg>\n', encoding="utf-8")
+
+
+def legend(svg, x, y, items, maxw):
+    cx, cy = x, y
+    for label, color in items:
+        w = 26 + 6.2 * len(label)
+        if cx + w > x + maxw:
+            cx, cy = x, cy + 18
+        svg.rect(cx, cy - 9, 11, 11, color, 2)
+        svg.text(cx + 16, cy, label, 11, color=MUTED)
+        cx += w
+    return cy
+
+
+def axes(svg, x0, y0, w, h, ylo, yhi, fmt_y=lambda v: f"{v:g}", ylabel=None):
+    ticks = nice_ticks(ylo, yhi)
+    lo, hi = ticks[0], ticks[-1]
+    for t in ticks:
+        y = y0 + h - (t - lo) / (hi - lo) * h
+        svg.line(x0, y, x0 + w, y)
+        svg.text(x0 - 6, y + 3.5, fmt_y(t), 10, "end", MUTED)
+    svg.line(x0, y0 + h, x0 + w, y0 + h, "#9aa0a6")
+    return lo, hi
+
+
+def ysc(v, lo, hi, y0, h):
+    return y0 + h - (v - lo) / (hi - lo) * h
+
+
+def fig_step1_bars():
+    cols, panel_w, panel_h = 3, 330, 190
+    rows_n = 2
+    svg = Svg(cols * panel_w + 40, 100 + rows_n * (panel_h + 80) + 30)
+    svg.text(20, 24, "Step 1: mean response time by configuration and workload class", 15, weight=600)
+    svg.text(20, 42, f"Bars: mean over 10 trials (seeds base+0..9), context-switch cost 1 tu. Error bars: 95% Student-t confidence interval. Lower is better.", 11, color=MUTED)
+    legend(svg, 20, 62, [(c, COLOR[c]) for c in CONFIG_ORDER[:8]], cols * panel_w)
+    for i, cls in enumerate(CLASSES):
+        r, c = divmod(i, cols)
+        x0, y0 = 20 + c * panel_w + 44, 114 + r * (panel_h + 80)
+        w, h = panel_w - 64, panel_h
+        stats = [interval(vals(S1, "response_mean", workload_class=cls, config=cfg)) for cfg in CONFIG_ORDER[:8]]
+        lo, hi = axes(svg, x0, y0, w, h, 0, max(s[2] for s in stats) * 1.1, lambda v: f"{v:g}")
+        svg.text(x0, y0 - 18, CLASS_NAME[cls], 12, weight=600)
+        bw = w / 8
+        for j, (cfg, (m, l, u, _)) in enumerate(zip(CONFIG_ORDER[:8], stats)):
+            bx = x0 + j * bw + bw * 0.15
+            svg.rect(bx, ysc(m, lo, hi, y0, h), bw * 0.7, y0 + h - ysc(m, lo, hi, y0, h), COLOR[cfg], 2)
+            cx = bx + bw * 0.35
+            svg.line(cx, ysc(u, lo, hi, y0, h), cx, ysc(max(l, lo), lo, hi, y0, h), INK, 1.2)
+            svg.line(cx - 3, ysc(u, lo, hi, y0, h), cx + 3, ysc(u, lo, hi, y0, h), INK, 1.2)
+            svg.line(cx - 3, ysc(max(l, lo), lo, hi, y0, h), cx + 3, ysc(max(l, lo), lo, hi, y0, h), INK, 1.2)
+            svg.text(cx, y0 + h + 12, cfg.replace("RR q=", "RR"), 9, "middle", MUTED)
+        svg.text(x0 - 36, y0 + h / 2, "response (tu)", 10, "middle", MUTED, rotate=-90)
+    svg.save("fig1_step1_response_by_class.svg", "Mean response time by configuration and workload class",
+             "Grouped bars with 95% confidence intervals for eight scheduling configurations across five workload classes.")
+
+
+def fig_paired():
+    metrics = [("response_mean", "Mean response"), ("response_p95", "p95 response"), ("turnaround_mean", "Mean turnaround"), ("context_switches", "Context switches")]
+    panel_w, row_h = 300, 28
+    svg = Svg(4 * panel_w + 120, 150 + 5 * row_h)
+    svg.text(20, 24, "AQS versus RR q=4: per-trial percentage difference (paired by seed)", 15, weight=600)
+    svg.text(20, 42, "Dot: mean of per-trial (AQS − RR q=4) / RR q=4. Bar: 95% Student-t CI, 10 trials, cost 1 tu. Left of zero: AQS lower (better for all four metrics).", 11, color=MUTED)
+    data = {}
+    for m, _ in metrics:
+        for cls in CLASSES:
+            a, b = vals(S1, m, workload_class=cls, config="AQS"), vals(S1, m, workload_class=cls, config="RR q=4")
+            d = [(x - y) / y * 100 for x, y in zip(a, b) if y]
+            data[(m, cls)] = mean_ci(d) if d else None
+    for k, (m, title) in enumerate(metrics):
+        x0 = 130 + k * panel_w
+        pts = [data[(m, c)] for c in CLASSES if data[(m, c)]]
+        lo = min(p["mean"] - p["ci95"] for p in pts)
+        hi = max(p["mean"] + p["ci95"] for p in pts)
+        lo, hi = min(lo, 0), max(hi, 0)
+        ticks = nice_ticks(lo, hi, 4)
+        lo, hi = ticks[0], ticks[-1]
+        w = panel_w - 50
+        svg.text(x0, 78, title, 12, weight=600)
+        for t in ticks:
+            x = x0 + (t - lo) / (hi - lo) * w
+            svg.line(x, 88, x, 88 + 5 * row_h, GRID)
+            svg.text(x, 88 + 5 * row_h + 14, f"{t:g}%", 10, "middle", MUTED)
+        zx = x0 + (0 - lo) / (hi - lo) * w
+        svg.line(zx, 88, zx, 88 + 5 * row_h, "#5f6368", 1.5)
+        for i, cls in enumerate(CLASSES):
+            y = 88 + i * row_h + row_h / 2
+            if k == 0:
+                svg.text(x0 - 10, y + 4, CLASS_NAME[cls], 11, "end")
+            p = data[(m, cls)]
+            if not p:
+                continue
+            xl, xh, xm = (x0 + (v - lo) / (hi - lo) * w for v in (p["mean"] - p["ci95"], p["mean"] + p["ci95"], p["mean"]))
+            svg.line(xl, y, xh, y, "#2a78d6", 2.5)
+            svg.circle(xm, y, 4.5, "#2a78d6")
+    svg.save("fig2_aqs_vs_rr4_paired.svg", "AQS versus RR q=4, paired percentage differences",
+             "Forest plot of per-trial percentage differences between AQS and Round Robin q=4 for four metrics across five workload classes.")
+
+
+def line_panel(svg, x0, y0, w, h, title, xs, series, metric, ylabel, xlabel, ylo=0):
+    allv = [(m + (u if True else 0)) for s in series.values() for m, u in s]
+    hi_v = max(m + u for s in series.values() for m, u in s)
+    lo_v = min(ylo, min(m - u for s in series.values() for m, u in s))
+    lo, hi = axes(svg, x0, y0, w, h, lo_v, hi_v * 1.12, lambda v: fmt(metric, v) if metric == "cpu_utilization" else f"{v:g}")
+    svg.text(x0, y0 - 18, title, 12, weight=600)
+    n = len(xs)
+    for i, xv in enumerate(xs):
+        x = x0 + (i + 0.5) / n * w
+        svg.text(x, y0 + h + 13, xv, 9.5, "middle", MUTED)
+    svg.text(x0 + w / 2, y0 + h + 28, xlabel, 10, "middle", MUTED)
+    svg.text(x0 - 38, y0 + h / 2, ylabel, 10, "middle", MUTED, rotate=-90)
+    for cfg, pts in series.items():
+        col = COLOR.get(cfg, "#2a78d6")
+        path = []
+        for i, (m, u) in enumerate(pts):
+            x = x0 + (i + 0.5) / n * w
+            y = ysc(m, lo, hi, y0, h)
+            path.append(f"{x:.1f},{y:.1f}")
+            svg.line(x, ysc(m + u, lo, hi, y0, h), x, ysc(max(m - u, lo), lo, hi, y0, h), col, 1.3)
+        svg.add(f'<polyline points="{" ".join(path)}" fill="none" stroke="{col}" stroke-width="2"/>')
+        for i, (m, u) in enumerate(pts):
+            svg.circle(x0 + (i + 0.5) / n * w, ysc(m, lo, hi, y0, h), 3.2, col)
+
+
+def fig_cost():
+    pw, ph = 250, 150
+    svg = Svg(5 * pw + 60, 150 + 2 * (ph + 70))
+    svg.text(20, 24, "Step 2: sensitivity to the simulated context-switch cost", 15, weight=600)
+    svg.text(20, 42, "Mean over 10 trials with 95% CI bars. Top: context switches. Bottom: mean response. Lower is better.", 11, color=MUTED)
+    legend(svg, 20, 62, [(c, COLOR[c]) for c in ("RR q=2", "RR q=4", "AQS")], 600)
+    for r, (m, yl) in enumerate((("context_switches", "switches"), ("response_mean", "response (tu)"))):
+        for c, cls in enumerate(CLASSES):
+            series = {cfg: [(interval(vals(S2, m, workload_class=cls, config=cfg, context_switch_cost=k))[0], interval(vals(S2, m, workload_class=cls, config=cfg, context_switch_cost=k))[3]) for k in range(6)] for cfg in ("RR q=2", "RR q=4", "AQS")}
+            line_panel(svg, 20 + c * pw + 46, 120 + r * (ph + 70), pw - 66, ph, CLASS_NAME[cls], [0, 1, 2, 3, 4, 5], series, m, yl, "switch cost (tu)")
+    svg.save("fig3_cost_sweep.svg", "Sensitivity to context-switch cost", "Context switches and mean response versus simulated switch cost for RR q=2, RR q=4 and AQS in five workload classes.")
+
+
+def fig_quantum():
+    pw, ph = 250, 150
+    svg = Svg(5 * pw + 60, 150 + 2 * (ph + 70))
+    svg.text(20, 24, "Step 3: quantum sensitivity, Round Robin versus AQS (base quantum)", 15, weight=600)
+    svg.text(20, 42, "Mean over 10 trials with 95% CI bars, switch cost 1 tu. For AQS the x value is the base quantum; the quantum then adapts within [min(2, x), max(12, x)].", 11, color=MUTED)
+    legend(svg, 20, 62, [(RR_SWEPT, COLOR[RR_SWEPT]), (AQS_SWEPT, COLOR[AQS_SWEPT])], 500)
+    for r, (m, yl) in enumerate((("response_mean", "response (tu)"), ("context_switches", "switches"))):
+        for c, cls in enumerate(CLASSES):
+            series = {}
+            for lab, cfg in ((RR_SWEPT, "RR"), (AQS_SWEPT, "AQS")):
+                series[lab] = [(interval(vals(S3, m, workload_class=cls, config=cfg, sweep_value=q))[0], interval(vals(S3, m, workload_class=cls, config=cfg, sweep_value=q))[3]) for q in Q]
+            line_panel(svg, 20 + c * pw + 46, 120 + r * (ph + 70), pw - 66, ph, CLASS_NAME[cls], Q, series, m, yl, "quantum")
+    svg.save("fig4_quantum_sweep.svg", "Quantum sensitivity", "Mean response and context switches versus quantum for Round Robin and AQS in five workload classes.")
+
+
+def fig_scale():
+    pw, ph = 330, 170
+    svg = Svg(2 * pw + 60, 170 + 2 * (ph + 70))
+    svg.text(20, 24, "Step 4: scaling with the number of processes (Interactive and Mixed classes)", 15, weight=600)
+    svg.text(20, 42, "Mean over 10 trials with 95% CI bars, switch cost 1 tu. Lower is better.", 11, color=MUTED)
+    legend(svg, 20, 62, [(c, COLOR[c]) for c in CONFIG_ORDER[:8]], 2 * pw)
+    for r, cls in enumerate(("interactive", "mixed")):
+        for c, (m, yl) in enumerate((("response_mean", "response (tu)"), ("turnaround_mean", "turnaround (tu)"))):
+            series = {cfg: [(interval(vals(S4, m, workload_class=cls, config=cfg, sweep_value=n))[0], interval(vals(S4, m, workload_class=cls, config=cfg, sweep_value=n))[3]) for n in N] for cfg in CONFIG_ORDER[:8]}
+            line_panel(svg, 20 + c * pw + 46, 122 + r * (ph + 70), pw - 66, ph, f"{CLASS_NAME[cls]}: {LABEL[m]}", N, series, m, yl, "processes")
+    svg.save("fig5_scale.svg", "Scaling with process count", "Mean response and turnaround versus number of processes for eight configurations in the Interactive and Mixed classes.")
+
+
+fig_step1_bars(); fig_paired(); fig_cost(); fig_quantum(); fig_scale()
+for f in CHARTS.glob("*.svg"):
+    shutil.copy(f, SITE / f.name)  # the Research page shows two of them
+print("wrote tables.md, verdicts.json,", len(list(CHARTS.glob('*.svg'))), "charts and the website table")

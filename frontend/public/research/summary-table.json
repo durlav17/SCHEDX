@@ -1,0 +1,166 @@
+{
+ "source": "research-results/ (analyze.py)",
+ "simulations": 3110,
+ "trials_per_class": 10,
+ "context_switch_cost": 1,
+ "protocol_sha256": "0d3945b25a03f9cc32c5fa0127b99ec56b68fd37dd3d9961efc18d33f529c456",
+ "rule": "clear iff 95% t-CIs of the means do not overlap (PROTOCOL.md)",
+ "baseline": "RR q=4",
+ "rows": [
+  {
+   "class": "CPU-bound",
+   "response_mean": {
+    "verdict": "better",
+    "paired": "better",
+    "delta_pct": -11.88,
+    "aqs": 14.09,
+    "rr4": 15.99
+   },
+   "turnaround_mean": {
+    "verdict": "unclear",
+    "paired": "unclear",
+    "delta_pct": -0.57,
+    "aqs": 146.91,
+    "rr4": 147.75
+   },
+   "context_switches": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -4.95,
+    "aqs": 38.4,
+    "rr4": 40.4
+   },
+   "max_ready_stint": {
+    "verdict": "worse",
+    "paired": "worse",
+    "delta_pct": 8.86,
+    "aqs": 38.1,
+    "rr4": 35.0
+   }
+  },
+  {
+   "class": "I/O-heavy",
+   "response_mean": {
+    "verdict": "unclear",
+    "paired": "unclear",
+    "delta_pct": 2.09,
+    "aqs": 9.16,
+    "rr4": 8.97
+   },
+   "turnaround_mean": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -4.39,
+    "aqs": 75.12,
+    "rr4": 78.58
+   },
+   "context_switches": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -12.58,
+    "aqs": 26.4,
+    "rr4": 30.2
+   },
+   "max_ready_stint": {
+    "verdict": "unclear",
+    "paired": "worse",
+    "delta_pct": 4.95,
+    "aqs": 23.3,
+    "rr4": 22.2
+   }
+  },
+  {
+   "class": "Interactive",
+   "response_mean": {
+    "verdict": "unclear",
+    "paired": "unclear",
+    "delta_pct": 4.06,
+    "aqs": 12.62,
+    "rr4": 12.12
+   },
+   "turnaround_mean": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -6.89,
+    "aqs": 33.9,
+    "rr4": 36.41
+   },
+   "context_switches": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -16.95,
+    "aqs": 19.6,
+    "rr4": 23.6
+   },
+   "max_ready_stint": {
+    "verdict": "unclear",
+    "paired": "worse",
+    "delta_pct": 16.6,
+    "aqs": 30.9,
+    "rr4": 26.5
+   }
+  },
+  {
+   "class": "Mixed",
+   "response_mean": {
+    "verdict": "unclear",
+    "paired": "unclear",
+    "delta_pct": -3.2,
+    "aqs": 14.82,
+    "rr4": 15.31
+   },
+   "turnaround_mean": {
+    "verdict": "unclear",
+    "paired": "unclear",
+    "delta_pct": -2.43,
+    "aqs": 70.65,
+    "rr4": 72.41
+   },
+   "context_switches": {
+    "verdict": "better",
+    "paired": "better",
+    "delta_pct": -20.24,
+    "aqs": 26.4,
+    "rr4": 33.1
+   },
+   "max_ready_stint": {
+    "verdict": "worse",
+    "paired": "worse",
+    "delta_pct": 23.84,
+    "aqs": 40.0,
+    "rr4": 32.3
+   }
+  },
+  {
+   "class": "High load",
+   "response_mean": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -4.39,
+    "aqs": 40.77,
+    "rr4": 42.65
+   },
+   "turnaround_mean": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -4.11,
+    "aqs": 161.15,
+    "rr4": 168.04
+   },
+   "context_switches": {
+    "verdict": "unclear",
+    "paired": "better",
+    "delta_pct": -14.52,
+    "aqs": 52.4,
+    "rr4": 61.3
+   },
+   "max_ready_stint": {
+    "verdict": "worse",
+    "paired": "worse",
+    "delta_pct": 7.08,
+    "aqs": 93.8,
+    "rr4": 87.6
+   }
+  }
+ ]
+}

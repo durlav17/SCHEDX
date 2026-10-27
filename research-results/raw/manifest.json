@@ -1,0 +1,200 @@
+{
+ "protocol_sha256": "0d3945b25a03f9cc32c5fa0127b99ec56b68fd37dd3d9961efc18d33f529c456",
+ "engine_sources_sha256": "9f1dc96ac272b3f3da2078a1d67fd544715890ffadd8c525504fd4ebc58d2692",
+ "classes": [
+  "cpu_bound",
+  "io_heavy",
+  "interactive",
+  "mixed",
+  "high_load"
+ ],
+ "trials_per_class": 10,
+ "seed_rule": "class base seed + trial (trial = 0..9)",
+ "base_seeds": {
+  "cpu_bound": 101,
+  "io_heavy": 202,
+  "interactive": 303,
+  "mixed": 404,
+  "high_load": 505
+ },
+ "generators": {
+  "cpu_bound": {
+   "count": 8,
+   "seed": 101,
+   "arrival_span": 15,
+   "cpu_min": 8,
+   "cpu_max": 30,
+   "io_fraction": 0.0
+  },
+  "io_heavy": {
+   "count": 8,
+   "seed": 202,
+   "arrival_span": 10,
+   "cpu_min": 1,
+   "cpu_max": 5,
+   "io_fraction": 0.9,
+   "io_cycles_max": 4,
+   "io_min": 4,
+   "io_max": 12
+  },
+  "interactive": {
+   "count": 12,
+   "seed": 303,
+   "arrival_pattern": "poisson",
+   "mean_interarrival": 2.0,
+   "cpu_distribution": "exponential",
+   "cpu_min": 1,
+   "cpu_max": 10,
+   "cpu_mean": 3.0,
+   "io_fraction": 0.5,
+   "io_cycles_max": 2,
+   "io_min": 2,
+   "io_max": 6
+  },
+  "mixed": {
+   "count": 10,
+   "seed": 404,
+   "arrival_span": 20,
+   "cpu_distribution": "bimodal",
+   "cpu_min": 1,
+   "cpu_max": 24,
+   "short_fraction": 0.7,
+   "io_fraction": 0.3,
+   "io_cycles_max": 2,
+   "io_min": 2,
+   "io_max": 6
+  },
+  "high_load": {
+   "count": 20,
+   "seed": 505,
+   "arrival_span": 5,
+   "cpu_min": 2,
+   "cpu_max": 15,
+   "io_fraction": 0.2
+  }
+ },
+ "context_switch_cost_main": 1,
+ "starvation_threshold": 50,
+ "configurations": [
+  {
+   "label": "FCFS",
+   "algorithm": "fcfs",
+   "params": {}
+  },
+  {
+   "label": "SJF",
+   "algorithm": "sjf",
+   "params": {}
+  },
+  {
+   "label": "SRTF",
+   "algorithm": "srtf",
+   "params": {}
+  },
+  {
+   "label": "RR q=2",
+   "algorithm": "rr",
+   "params": {
+    "quantum": 2
+   }
+  },
+  {
+   "label": "RR q=4",
+   "algorithm": "rr",
+   "params": {
+    "quantum": 4
+   }
+  },
+  {
+   "label": "RR q=8",
+   "algorithm": "rr",
+   "params": {
+    "quantum": 8
+   }
+  },
+  {
+   "label": "MLFQ",
+   "algorithm": "mlfq",
+   "params": {
+    "quanta": [
+     4,
+     8,
+     16
+    ],
+    "boost_interval": 100
+   }
+  },
+  {
+   "label": "AQS",
+   "algorithm": "aqs",
+   "params": {
+    "base_quantum": 4,
+    "min_quantum": 2,
+    "max_quantum": 12,
+    "step": 1,
+    "high_load": 4,
+    "low_load": 1,
+    "overhead_limit": 0.2,
+    "window": 5
+   }
+  },
+  {
+   "label": "PRIO-P",
+   "algorithm": "priority",
+   "params": {
+    "preemptive": true,
+    "aging_interval": 0
+   }
+  }
+ ],
+ "cost_sweep": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "quantum_sweep": [
+  1,
+  2,
+  3,
+  4,
+  6,
+  8,
+  12,
+  16
+ ],
+ "scale_sweep": [
+  4,
+  8,
+  12,
+  16,
+  24,
+  32
+ ],
+ "scale_classes": [
+  "interactive",
+  "mixed"
+ ],
+ "simulations_completed": {
+  "step1": 450,
+  "step2": 900,
+  "step3": 800,
+  "step4": 960
+ },
+ "simulations_total": 3110,
+ "failed_or_skipped": [],
+ "csv_sha256": {
+  "step1_comparison.csv": "baae323f0adbbf376582df31b8288d6801f8079199a4760e4612c581ed6ee104",
+  "step2_cost_sweep.csv": "efe91b499346cb57672eef3e6f6af8e96f8fa513db05a516bbc5b7f3985eb20e",
+  "step3_quantum_sweep.csv": "7740132b9c4f39745aed4a073c8b6eebc35aa03cdceecb7071ddeea6fc1c721b",
+  "step4_scale.csv": "432aefecead2303465a0aa43f3b2676816268f0549df88cf3a655d69ceac7beb"
+ },
+ "environment": {
+  "python": "3.14.6",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "run_utc": "2026-10-27T15:45:28+00:00",
+  "wall_seconds": 3.2
+ }
+}

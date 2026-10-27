@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 290" width="1320" height="290" role="img" aria-labelledby="t d"><title id="t">AQS versus RR q=4, paired percentage differences</title><desc id="d">Forest plot of per-trial percentage differences between AQS and Round Robin q=4 for four metrics across five workload classes.</desc><rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20.0" y="24.0" font-size="15" text-anchor="start" fill="#1a1a19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">AQS versus RR q=4: per-trial percentage difference (paired by seed)</text>
+<text x="20.0" y="42.0" font-size="11" text-anchor="start" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">Dot: mean of per-trial (AQS − RR q=4) / RR q=4. Bar: 95% Student-t CI, 10 trials, cost 1 tu. Left of zero: AQS lower (better for all four metrics).</text>
+<text x="130.0" y="78.0" font-size="12" text-anchor="start" fill="#1a1a19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Mean response</text>
+<line x1="130.0" y1="88.0" x2="130.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="130.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-20%</text>
+<line x1="192.5" y1="88.0" x2="192.5" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="192.5" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-10%</text>
+<line x1="255.0" y1="88.0" x2="255.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="255.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">0%</text>
+<line x1="317.5" y1="88.0" x2="317.5" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="317.5" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">10%</text>
+<line x1="380.0" y1="88.0" x2="380.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="380.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">20%</text>
+<line x1="255.0" y1="88.0" x2="255.0" y2="228.0" stroke="#5f6368" stroke-width="1.5"/>
+<text x="120.0" y="106.0" font-size="11" text-anchor="end" fill="#1a1a19" font-weight="400" font-family="Segoe UI, Arial, sans-serif">CPU-bound</text>
+<line x1="145.4" y1="102.0" x2="217.5" y2="102.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="181.4" cy="102.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<text x="120.0" y="134.0" font-size="11" text-anchor="end" fill="#1a1a19" font-weight="400" font-family="Segoe UI, Arial, sans-serif">I/O-heavy</text>
+<line x1="248.7" y1="130.0" x2="290.9" y2="130.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="269.8" cy="130.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<text x="120.0" y="162.0" font-size="11" text-anchor="end" fill="#1a1a19" font-weight="400" font-family="Segoe UI, Arial, sans-serif">Interactive</text>
+<line x1="253.1" y1="158.0" x2="322.8" y2="158.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="288.0" cy="158.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<text x="120.0" y="190.0" font-size="11" text-anchor="end" fill="#1a1a19" font-weight="400" font-family="Segoe UI, Arial, sans-serif">Mixed</text>
+<line x1="207.0" y1="186.0" x2="266.0" y2="186.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="236.5" cy="186.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<text x="120.0" y="218.0" font-size="11" text-anchor="end" fill="#1a1a19" font-weight="400" font-family="Segoe UI, Arial, sans-serif">High load</text>
+<line x1="214.1" y1="214.0" x2="242.4" y2="214.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="228.3" cy="214.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<text x="430.0" y="78.0" font-size="12" text-anchor="start" fill="#1a1a19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">p95 response</text>
+<line x1="430.0" y1="88.0" x2="430.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="430.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-40%</text>
+<line x1="492.5" y1="88.0" x2="492.5" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="492.5" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-20%</text>
+<line x1="555.0" y1="88.0" x2="555.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="555.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">0%</text>
+<line x1="617.5" y1="88.0" x2="617.5" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="617.5" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">20%</text>
+<line x1="680.0" y1="88.0" x2="680.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="680.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">40%</text>
+<line x1="555.0" y1="88.0" x2="555.0" y2="228.0" stroke="#5f6368" stroke-width="1.5"/>
+<line x1="491.5" y1="102.0" x2="530.3" y2="102.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="510.9" cy="102.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="538.7" y1="130.0" x2="566.1" y2="130.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="552.4" cy="130.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="563.0" y1="158.0" x2="618.8" y2="158.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="590.9" cy="158.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="534.0" y1="186.0" x2="608.8" y2="186.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="571.4" cy="186.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="539.7" y1="214.0" x2="558.0" y2="214.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="548.8" cy="214.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<text x="730.0" y="78.0" font-size="12" text-anchor="start" fill="#1a1a19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Mean turnaround</text>
+<line x1="730.0" y1="88.0" x2="730.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="730.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-15%</text>
+<line x1="792.5" y1="88.0" x2="792.5" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="792.5" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-10%</text>
+<line x1="855.0" y1="88.0" x2="855.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="855.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-5%</text>
+<line x1="917.5" y1="88.0" x2="917.5" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="917.5" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">0%</text>
+<line x1="980.0" y1="88.0" x2="980.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="980.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">5%</text>
+<line x1="917.5" y1="88.0" x2="917.5" y2="228.0" stroke="#5f6368" stroke-width="1.5"/>
+<line x1="869.8" y1="102.0" x2="945.2" y2="102.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="907.5" cy="102.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="834.1" y1="130.0" x2="890.2" y2="130.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="862.2" cy="130.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="748.6" y1="158.0" x2="904.5" y2="158.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="826.5" cy="158.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="839.0" y1="186.0" x2="930.0" y2="186.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="884.5" cy="186.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="831.2" y1="214.0" x2="906.7" y2="214.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="868.9" cy="214.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<text x="1030.0" y="78.0" font-size="12" text-anchor="start" fill="#1a1a19" font-weight="600" font-family="Segoe UI, Arial, sans-serif">Context switches</text>
+<line x1="1030.0" y1="88.0" x2="1030.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="1030.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-30%</text>
+<line x1="1113.3" y1="88.0" x2="1113.3" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="1113.3" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-20%</text>
+<line x1="1196.7" y1="88.0" x2="1196.7" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="1196.7" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">-10%</text>
+<line x1="1280.0" y1="88.0" x2="1280.0" y2="228.0" stroke="#e3e5e8" stroke-width="1"/>
+<text x="1280.0" y="242.0" font-size="10" text-anchor="middle" fill="#5f6368" font-weight="400" font-family="Segoe UI, Arial, sans-serif">0%</text>
+<line x1="1280.0" y1="88.0" x2="1280.0" y2="228.0" stroke="#5f6368" stroke-width="1.5"/>
+<line x1="1198.5" y1="102.0" x2="1271.1" y2="102.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="1234.8" cy="102.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="1137.2" y1="130.0" x2="1211.9" y2="130.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="1174.5" cy="130.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="1099.9" y1="158.0" x2="1182.8" y2="158.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="1141.4" cy="158.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="1073.8" y1="186.0" x2="1149.4" y2="186.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="1111.6" cy="186.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+<line x1="1137.5" y1="214.0" x2="1183.2" y2="214.0" stroke="#2a78d6" stroke-width="2.5"/>
+<circle cx="1160.4" cy="214.0" r="4.5" fill="#2a78d6" stroke="#ffffff" stroke-width="1.5"/>
+</svg>

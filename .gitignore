@@ -1,0 +1,83 @@
+# ---- Python
+__pycache__/
+*.py[cod]
+backend/.venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# ---- Runtime data (never commit): the SQLite experiment history, server logs and the background-server PID file
+backend/data/
+*.db
+*.db-journal
+*.sqlite3
+
+# ---- Local configuration and secrets. An example file (.env.example) stays tracked.
+.env
+.env.*
+!.env.example
+
+# ---- Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+*.tsbuildinfo
+npm-debug.log*
+.npm/
+
+# ---- Logs and OS / editor files
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# NOT ignored on purpose: research-results/ (protocol, raw CSV/JSON, charts, summary), docs/,
+# frontend/public/research/ (website copy of the charts and results table) and
+# frontend/src/lib/__fixtures__/ (golden fixture shared by the Python and TypeScript decoders).
+
+# SchedX publication safety
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
+backend/data/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.db
+*.sqlite
+*.sqlite3
+
+# SchedX generated files and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
+backend/data/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.db
+*.sqlite
+*.sqlite3
