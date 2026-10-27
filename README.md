@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SchedX
 
 **SchedX: An Explainable, Workload-Adaptive CPU Scheduling and Performance Evaluation Platform**
@@ -131,3 +132,6 @@ A result with the complete per-event trace grows with events × processes (about
 | Want an empty experiment history | Stop the server, delete `backend\data\schedx.db` (or set the `SCHEDX_DB` environment variable to another file) |
 | Playwright: browser not found | `cd frontend; npx playwright install chromium` |
 | Background server will not start | See `backend\data\server.err.log` |
+=======
+# SCHEDX
+>>>>>>> 157e1bfe6a9170a7145070c7f68d1707123f900e
