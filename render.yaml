@@ -1,0 +1,23 @@
+# SchedX backend (FastAPI) on Render. The frontend is hosted separately on Netlify; see docs/deployment-netlify-render.md.
+services:
+  - type: web
+    name: schedx-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      # Explicit browser origins allowed to call this API, comma-separated, e.g. https://my-site.netlify.app
+      # Enter it in the Render dashboard after Netlify gives you the real URL (sync: false = not stored in Git).
+      - key: SCHEDX_CORS_ORIGINS
+        sync: false
+      # Optional. Unset: the database lives in backend/data/ on Render's ephemeral disk (lost on redeploy or restart).
+      # With a paid persistent disk mounted at /var/data, set SCHEDX_DB=/var/data/schedx.db (see the guide).
+    # disk:   # paid plans only; uncomment together with SCHEDX_DB=/var/data/schedx.db
+    #   name: schedx-data
+    #   mountPath: /var/data
+    #   sizeGB: 1

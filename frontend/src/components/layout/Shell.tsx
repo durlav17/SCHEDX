@@ -5,6 +5,7 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { cx } from "../ui";
+import { api } from "../../services/api";
 
 export function Logo({ compact }: { compact?: boolean }) {
   return (
@@ -87,7 +88,7 @@ function BackendStatus() {
   useEffect(() => {
     let alive = true;
     const check = () =>
-      fetch("/api/health").then((r) => alive && setOk(r.ok)).catch(() => alive && setOk(false));
+      api.health().then(() => alive && setOk(true)).catch(() => alive && setOk(false));
     check();
     const t = setInterval(check, 15000);
     return () => { alive = false; clearInterval(t); };

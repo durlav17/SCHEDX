@@ -5,8 +5,10 @@ Run (from backend/):  uvicorn app.main:app --reload --port 8000
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -24,6 +26,35 @@ log = logging.getLogger("schedx")
 FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
 
 
+LOCAL_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+
+def parse_cors_origins(raw: Optional[str]) -> list[str]:
+    """Allowed browser origins: the local development origins plus the comma-separated list in SCHEDX_CORS_ORIGINS.
+
+    Each entry must be an explicit origin (`https://host[:port]`, no path). A wildcard, a malformed entry or an entry
+    with a path is ignored with a warning, so a typo can never open the API to every site or stop the server starting.
+    """
+    origins = list(LOCAL_ORIGINS)
+    for item in (raw or "").split(","):
+        item = item.strip().rstrip("/")
+        if not item:
+            continue
+        try:
+            u = urlsplit(item)
+            ok = u.scheme in ("http", "https") and bool(u.hostname) and not (u.path or u.query or u.fragment or u.username) and "*" not in item
+            u.port  # raises ValueError for a bad port
+        except ValueError:
+            ok = False
+        if not ok:
+            log.warning("Ignoring invalid SCHEDX_CORS_ORIGINS entry %r (expected e.g. https://my-site.netlify.app)", item)
+            continue
+        origin = f"{u.scheme}://{u.netloc}".lower()
+        if origin not in origins:
+            origins.append(origin)
+    return origins
+
+
 def _error(status: int, kind: str, messages: list[str]) -> JSONResponse:
     return JSONResponse(status_code=status, content={"error": {"type": kind, "messages": messages}})
 
@@ -35,7 +66,7 @@ def create_app(db_path: Optional[str] = None) -> FastAPI:
     app.add_middleware(GZipMiddleware, minimum_size=1024)  # large JSON results compress ~10x
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_origins=parse_cors_origins(os.environ.get("SCHEDX_CORS_ORIGINS")),
         allow_methods=["*"],
         allow_headers=["*"],
     )

@@ -1,0 +1,16 @@
+# SchedX frontend on Netlify. The Python API is hosted separately (Render); see docs/deployment-netlify-render.md.
+# Set VITE_API_BASE_URL (Site configuration > Environment variables) to the Render service URL. It is not hardcoded here.
+[build]
+  command = "npm ci --prefix frontend && npm run build --prefix frontend"
+  publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Single-page-application fallback: a direct visit to /lab, /compare, ... is answered with index.html and React Router
+# takes over. Netlify serves a real file first (assets, /research/*.json, index.html), because this rule is not forced.
+# There is deliberately no /api rule: API calls go straight from the browser to the backend origin.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

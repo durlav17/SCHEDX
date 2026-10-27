@@ -50,3 +50,13 @@ Developer utilities (not tests): `frontend/e2e/shoot-pages.mjs` (screenshots eve
 
 ## Not tested
 `start.ps1 -Dev`; Firefox and Safari; physical mobile devices; Python versions other than 3.14; automated accessibility tooling; very large saved-experiment histories.
+
+## Deployment preparation (Netlify + Render)
+Run locally; the hosted services were **not** deployed or probed.
+| Check | Result |
+|---|---|
+| `backend: pytest` on Python 3.14 (project venv) | passing, including 8 new tests in `tests/test_deployment.py` (CORS parsing, allow and deny, malformed values, `SCHEDX_DB`, no leak in 500 responses) |
+| `backend: pytest` on Python 3.12.10 in a fresh venv built from `requirements.txt` (the version in `render.yaml`) | 363 passed |
+| `frontend: vitest` | 26 passed (4 new: relative vs configured API base URL, trailing slash and `/api` tolerance) |
+| `frontend: tsc -b`, `vite build` | pass |
+| Production-style run: backend on its own port with `SCHEDX_CORS_ORIGINS`, frontend built with `VITE_API_BASE_URL` and served from another origin, driven in Chromium | health, simulation, save, comparison and a direct deep link worked; every API call went cross-origin; no console errors; a preflight from a non-listed origin was refused |

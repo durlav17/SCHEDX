@@ -1,3 +1,4 @@
+import { apiUrl } from "../lib/apiBase";
 import { expandResult, isCompact } from "../lib/compact";
 import type {
   AlgorithmInfo,
@@ -22,13 +23,13 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(apiUrl(path), {
       ...init,
       headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
     throw new ApiError(0, [
-      "Cannot reach the SchedX backend. Start it with scripts/start.ps1 (or `uvicorn app.main:app --port 8000` in backend/).",
+      "Cannot reach the SchedX backend. Locally, start it with scripts/start.ps1 (or `uvicorn app.main:app --port 8000` in backend/). On a hosted deployment the free backend may be waking up (retry in about a minute) or this site's address may be missing from the backend's SCHEDX_CORS_ORIGINS.",
     ], "network_error");
   }
   const text = await res.text();
@@ -41,7 +42,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const msgs: string[] = body?.error?.messages ?? [
       res.status >= 500 && !body
-        ? "The backend is not responding. Make sure the API server is running on port 8000."
+        ? "The backend is not responding. Make sure the API server is running (locally: port 8000)."
         : `Request failed with status ${res.status}.`,
     ];
     throw new ApiError(res.status, msgs, body?.error?.type);

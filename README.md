@@ -50,6 +50,9 @@ Then open **http://127.0.0.1:8000** and press **Run demonstration** in the Sched
 | **Saved experiment** (inputs, seed, configurations, engine results) | SQLite `backend/data/schedx.db` | until deleted. *Save run* in the Lab; Arena, What-If and Studio also save |
 | **Reproducible** | History → *Reproduce* reruns the stored inputs and checks the results are identical; *Open in Lab / Arena* reruns them so they can be replayed | |
 
+## Deployment (Netlify + Render)
+The frontend can be hosted on Netlify and the FastAPI backend on Render: [netlify.toml](netlify.toml) and [render.yaml](render.yaml) are in the repository root. In short: set `VITE_API_BASE_URL` (Netlify) to the Render URL and `SCHEDX_CORS_ORIGINS` (Render) to the Netlify URL. On Render's free plan saved experiments are **not** persistent across redeploys, and the public demo has no authentication. Steps, settings and troubleshooting: [docs/deployment-netlify-render.md](docs/deployment-netlify-render.md). Locally nothing changes: leave `VITE_API_BASE_URL` empty.
+
 ## Research results
 The research protocol was fixed before running ([research-results/PROTOCOL.md](research-results/PROTOCOL.md)) and executed with the SchedX engine: 3,110 simulations, 10 seeded trials per workload class. Findings, tables, raw per-trial data and charts are in [research-results/](research-results/) (start with [summary.md](research-results/summary.md)). In short, at default AQS parameters AQS **did not clearly improve response time** for the Interactive and Mixed classes; its measurable effect is fewer context switches and lower turnaround when switching is costly, at the price of higher response time. Rerun: `backend\.venv\Scripts\python.exe research-results\run_research.py --verify` then `analyze.py`.
 
